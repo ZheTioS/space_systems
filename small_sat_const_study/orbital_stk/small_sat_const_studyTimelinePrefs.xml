@@ -1,0 +1,13 @@
+<?xml version = "1.0" standalone = "yes"?>
+<TimelineLine_Prefs STK_version = "11.2.0">
+    <Views Type = "Content">
+        <ContentView Name = "Scenario Availability">
+            <Row ClassName = "Scenario" ComponentName = "AvailabilityIntervals" DisplayName = "small_sat_const_study AvailabilityIntervals" IsDefaultName = "True" IsExpanded = "False" IsGroup = "False" IsHidden = "False" Path = "/Application/STK/Scenario/small_sat_const_study" Type = "IntervalList">
+                <Interval Name = "small_sat_const_study AvailabilityIntervals" StartTime = "27 Apr 2025 22:00:00.000" StopTime = "4 May 2025 10:00:00.000" />
+            </Row>
+        </ContentView>
+    </Views>
+    <Views Type = "Time">
+        <TimeView FullViewRulerStartTime = "0.000000" FullViewRulerStopTime = "0.000000" GlobalIntervalComp = "AnalysisInterval" GlobalIntervalCompPath = "/Application/STK/Scenario/small_sat_const_study" GlobalStartOffset = "0.000000" GlobalStartTime = "27 Apr 2025 22:00:00.000" GlobalStopOffset = "0.000000" GlobalStopTime = "4 May 2025 10:00:00.000" MaxFullViewTime = "0.000000" MinFullViewTime = "0.000000" Name = "Scenario Analysis Period" ViewportStartTime = "0.000000" ViewportStopTime = "0.000000" />
+    </Views>
+</TimelineLine_Prefs>
