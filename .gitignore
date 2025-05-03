@@ -203,3 +203,9 @@ Thumbs.db
 # Git
 *.swp
 *~
+
+# STK
+*/scenario/*
+!*/scenario/*.sc
+
+install-pyenv-win.ps1

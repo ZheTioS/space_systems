@@ -108,7 +108,7 @@ VO_V110
             CentralBody              Earth
             DisplayMode              Normal
             StereoProjectionMode     Automatic
-            ProjectionDistance       35079753.500000
+            ProjectionDistance       79110362.964007
             EyeSeparationFactor      0.020000
             WireframeMode            No
             CameraLightAntiSun       No
@@ -363,7 +363,7 @@ EndCentralBody
             Begin CSData
                 Show       Yes
                 ShowPts    Yes
-                ShowTx     No
+                ShowTx     Yes
                 ShowLabels No
                 UseDefStarCollection Yes
                 BrightestStarMag     -1.000000
@@ -378,6 +378,7 @@ EndCentralBody
                 ColorStarsByMag      No
                 StarColor            #ffffff
                 StarUpdateFrequency  365.000000
+                CTMFilename "S:\AGI\AGI.Systems.Tool.Kit.v11.Data.Disc_p30download.com\AGI-Celestial-Imagery\AGI Celestial Imagery\mwpan2.ctm"
             End
             Begin CentralBodyOpts
                 BeginCentralBody
@@ -721,9 +722,9 @@ EndCentralBody
                 UseLayer                Yes
                 FromName                "Earth"
                 FromRegPosAttView       "Point"
-                FromPosition            32682031.433797739446163177  12746526.075014270842075348  0.000000000000000000
-                FromOffset              32682031.433797739446163177  12746526.075014270842075348  0.000000000000000000
-                FromOffsetLLR           0.000000000000000000  0.371870251027806908  35079753.500000000000000000
+                FromPosition            -66959502.959114156663417816  -38026551.660930849611759186  -18134383.379200540482997894
+                FromOffset              -66959502.959114156663417816  -38026551.660930849611759186  -18134383.379200540482997894
+                FromOffsetLLR           -0.231285439409311122  -2.625107760070066742  79110362.964006707072257996
                 ToName                  "Earth"
                 ToRegPosAttView         "Point"
                 ToPosition              0.000000000000000000  0.000000000000000000  0.000000000000000000
@@ -731,9 +732,9 @@ EndCentralBody
                 ToOffsetLLR             0.000000000000000000  0.000000000000000000  0.000000000000000000
                 ConstantDistanceType    None
                 ConstantDistanceValue   1.000000
-                UpVector                0.000000000000000000  0.000000000000000000  1.000000000000000000
-                ViewRad                 35079753.500000000000000000
-                ViewQuat                0.1848656 0.0000000 0.0000000 -0.9827638
+                UpVector                -0.199328395140620812  -0.113199339605813756  0.973372539371988088
+                ViewRad                 79110362.964006707072257996
+                ViewQuat                0.9603826 0.0294672 -0.1115590 0.2536759
                 ViewCoordSystem         From
                 ViewFromToMode          FromTo
                 ViewToCBIMtx            1.000000000000000000 0.000000000000000000 0.000000000000000000 0.000000000000000000 1.000000000000000000 0.000000000000000000  0.000000000000000000 0.000000000000000000 1.000000000000000000
@@ -747,7 +748,7 @@ EndCentralBody
                 MinAngleToUpAxis        0.0087266
                 InitUpAxisUp            Yes
                 TempUpAxisUp            Yes
-                CrossAxis               0.3633585 -0.9316494 0.0000000
+                CrossAxis               -0.4938266 0.8695604 0.0000000
                 DefaultOffset           35079753.5000000
                 BaseDefaultOffset       6378137.0000000
             End View

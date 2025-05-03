@@ -1,14 +1,14 @@
 stk.v.11.0
 WrittenBy    STK_v11.2.0
 BEGIN Scenario
-    Name            small_sat_const_study
+    Name            test_small_sat_const_study
 
 BEGIN Epoch
 
-    Epoch        1 May 2025 22:00:00.000000000
+    Epoch        2 May 2025 22:00:00.000000000
     SmartEpoch
 	BEGIN	EVENT
-			Epoch	1 May 2025 22:00:00.000000000
+			Epoch	2 May 2025 22:00:00.000000000
 			EventEpoch
 				BEGIN	EVENT
 					Type	EVENT_LINKTO
@@ -165,7 +165,7 @@ BEGIN Extensions
 		LaunchWindowUseEntireTraj               Yes
 		LaunchWindowTrajMETStart                0.000
 		LaunchWindowTrajMETStop                 900.000
-		LaunchWindowStart                       -302400.000
+		LaunchWindowStart                       -388800.000
 		LaunchWindowStop                        -432000.000
 		LaunchMETOffset                         0.000
 		LaunchWindowUseSecEphem                 No 
@@ -373,6 +373,14 @@ BEGIN Extensions
     END ConnectReportUnits
     
     BEGIN ReportFavorites
+        BEGIN Class
+            Name  FigureOfMerit
+            BEGIN Favorite
+                Type    Report
+                BaseDir Install
+                Style   GI Point FOM
+            END Favorite
+        END Class
     END ReportFavorites
     
     BEGIN ADFFileData
@@ -1122,9 +1130,9 @@ baseline
 
 BEGIN Animation
 
-    StartTime          1 May 2025 22:00:00.000000000
+    StartTime          2 May 2025 22:00:00.000000000
     EndTime            4 May 2025 10:00:00.000000000
-    CurrentTime        1 May 2025 22:00:00.000000000
+    CurrentTime        2 May 2025 22:00:00.000000000
     Direction          Forward
     UpdateDelta        10.000000
     RefreshDelta       0.010000
@@ -1927,7 +1935,10 @@ BEGIN SubObjects
 
 Class CoverageDefinition
 
+	CovDef
+	CovDef_F_-10_-10
 	FacilityCoverage
+	testDef
 
 END Class
 
@@ -4649,10 +4660,30 @@ END SubObjects
 BEGIN References
     Instance *
         *
+        CoverageDefinition/CovDef
+        CoverageDefinition/CovDef_F_-10_-10
         CoverageDefinition/FacilityCoverage
+        CoverageDefinition/testDef
+    END Instance
+    Instance CoverageDefinition/CovDef
+        CoverageDefinition/CovDef
+        CoverageDefinition/CovDef/FigureOfMerit/Fom
+    END Instance
+    Instance CoverageDefinition/CovDef/FigureOfMerit/Fom
+    END Instance
+    Instance CoverageDefinition/CovDef_F_-10_-10
+        CoverageDefinition/CovDef_F_-10_-10
     END Instance
     Instance CoverageDefinition/FacilityCoverage
-        CoverageDefinition/FacilityCoverage
+        CoverageDefinition/FacilityCoverage/FigureOfMerit/RevisitTimeFOM
+    END Instance
+    Instance CoverageDefinition/FacilityCoverage/FigureOfMerit/RevisitTimeFOM
+    END Instance
+    Instance CoverageDefinition/testDef
+        CoverageDefinition/testDef
+        CoverageDefinition/testDef/FigureOfMerit/Fom
+    END Instance
+    Instance CoverageDefinition/testDef/FigureOfMerit/Fom
     END Instance
     Instance Facility/F_-10_-10
         Facility/F_-10_-10
@@ -12761,7 +12792,10 @@ BEGIN References
         Facility/ILR
     END Instance
     Instance Satellite/3U_cubesat
+        CoverageDefinition/CovDef
+        CoverageDefinition/CovDef_F_-10_-10
         CoverageDefinition/FacilityCoverage
+        CoverageDefinition/testDef
         Satellite/3U_cubesat
     END Instance
 END References

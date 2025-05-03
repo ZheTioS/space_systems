@@ -1,7 +1,7 @@
 # Concept of Operations (CONOPS)
 
 ## Mission Summary
-- **Mission Type**: Earth Observation using an optical imager
+- **Mission Type**: Earth Observation using an optical imagery
 - **Platform**: 3U CubeSat form factor
 - **Orbit Type**: Sun-synchronous orbit (SSO)
 - **Local Time of Descending Node (LTDN)**: 10:30 AM
