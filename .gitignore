@@ -172,3 +172,40 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# STK
+*.stk
+*.vdf
+*.stl
+*.exe
+*.dll
+*.dat
+*.htm
+*.dpl
+*.log
+*.bin
+*.oem
+*.ephem
+*.att
+
+# Reports and Documents
+*.pdf
+*.docx
+*.pptx
+
+# System files
+.DS_Store
+Thumbs.db
+
+# VSCode settings (if you use it)
+.vscode/
+
+# Git
+*.swp
+*~
+
+# STK
+*/scenario/*
+!*/scenario/*.sc
+
+install-pyenv-win.ps1

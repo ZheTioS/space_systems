@@ -1,0 +1,38 @@
+[tool.poetry]
+name = "small-sat-const-study"
+version = "0.1.0"
+description = "Python scripts for small satellite constellation study using STK 11.2"
+authors = ["Vinayak Nair <vinayaksreenath@gmail.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+comtypes = "^1.1.14"  # Required for STK automation
+numpy = "^1.21.0"
+pandas = "^1.3.0"
+matplotlib = "^3.4.0"
+pywin32 = "^310"
+
+[tool.poetry.dev-dependencies]
+pytest = "^6.2.5"
+black = "^21.5b2"
+flake8 = "^3.9.2"
+mypy = "^0.910"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 119
+target-version = ['py38']
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+
+[tool.flake8]
+max-line-length = 119
+extend-ignore = "E203"
+
