@@ -1,0 +1,19 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.9
+    hooks:
+      - id: ruff
+        args: [--fix]
+        files: ^satops/backend/
+      - id: ruff-format
+        files: ^satops/backend/
+
+  - repo: local
+    hooks:
+      - id: frontend-typecheck
+        name: Frontend type check
+        entry: bash -c 'export PATH="$HOME/.bun/bin:$PATH" && cd satops/frontend && bun run tsc --noEmit'
+        language: system
+        files: ^satops/frontend/src/
+        types_or: [ts, tsx]
+        pass_filenames: false

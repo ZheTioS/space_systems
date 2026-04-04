@@ -172,3 +172,18 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# Frontend
+node_modules/
+dist/
+.vite/
+
+# SQLite
+*.db
+*.db-journal
+
+# Skyfield cache
+*.bsp
+
+# Bun
+bun.lock
