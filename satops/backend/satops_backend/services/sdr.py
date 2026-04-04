@@ -107,12 +107,10 @@ class SdrService:
 
     def _generate_synthetic(self) -> None:
         """Generate synthetic spectrum data for development."""
-        noise = np.random.normal(-80, 5, self._fft_size)
-        # Add a signal peak near center
+        spectrum = np.random.normal(-80, 5, self._fft_size)
+        # Add a signal peak near center (overwrite, not add — values are in dB)
         center = self._fft_size // 2
-        signal = np.zeros(self._fft_size)
-        signal[center - 5 : center + 5] = np.random.normal(-40, 3, 10)
-        spectrum = noise + signal
+        spectrum[center - 5 : center + 5] = np.random.normal(-40, 3, 10)
 
         if self._loop and not self._queue.full():
             self._loop.call_soon_threadsafe(self._queue.put_nowait, spectrum)

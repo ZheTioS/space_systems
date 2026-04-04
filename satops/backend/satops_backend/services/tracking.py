@@ -28,13 +28,24 @@ def get_observer() -> GeographicPosition:
 async def load_tles() -> dict[int, EarthSatellite]:
     """Fetch TLE data from CelesTrak and parse into Skyfield satellites."""
     global _satellites
-    async with httpx.AsyncClient() as client:
-        resp = await client.get(settings.tle_url, timeout=settings.tle_timeout_s)
-        resp.raise_for_status()
-
-    lines = resp.text.strip().splitlines()
     _satellites.clear()
 
+    async with httpx.AsyncClient() as client:
+        for url in settings.tle_urls:
+            try:
+                resp = await client.get(url, timeout=settings.tle_timeout_s)
+                resp.raise_for_status()
+                _parse_tle_text(resp.text)
+            except Exception:
+                logger.exception("Failed to fetch TLEs from %s", url)
+
+    logger.info("Loaded %d TLEs", len(_satellites))
+    return _satellites
+
+
+def _parse_tle_text(text: str) -> None:
+    """Parse 3-line TLE format and add to the satellite store."""
+    lines = text.strip().splitlines()
     for i in range(0, len(lines) - 2, 3):
         name = lines[i].strip()
         line1 = lines[i + 1].strip()
@@ -42,9 +53,6 @@ async def load_tles() -> dict[int, EarthSatellite]:
         sat = EarthSatellite(line1, line2, name, ts)
         norad_id = int(line2.split()[1])
         _satellites[norad_id] = sat
-
-    logger.info("Loaded %d TLEs", len(_satellites))
-    return _satellites
 
 
 def get_satellite(norad_id: int) -> EarthSatellite | None:

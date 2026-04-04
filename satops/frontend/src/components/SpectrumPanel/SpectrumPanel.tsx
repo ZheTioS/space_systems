@@ -6,7 +6,6 @@ export function SpectrumPanel() {
   const spectrum = useStore((s) => s.spectrum);
   const spectrumCanvasRef = useRef<HTMLCanvasElement>(null);
   const waterfallCanvasRef = useRef<HTMLCanvasElement>(null);
-  const waterfallBuffer = useRef<ImageData | null>(null);
 
   // Draw spectrum plot
   useEffect(() => {
@@ -60,29 +59,27 @@ export function SpectrumPanel() {
 
     const { width, height } = canvas;
     const data = spectrum.magnitudes_db;
-    const rowHeight = height / config.waterfallRows;
+    const rowHeight = Math.max(1, Math.ceil(height / config.waterfallRows));
 
-    // Shift existing content down
-    if (waterfallBuffer.current) {
-      ctx.putImageData(waterfallBuffer.current, 0, Math.ceil(rowHeight));
-    }
+    // Shift existing content down by copying canvas onto itself
+    ctx.drawImage(canvas, 0, 0, width, height, 0, rowHeight, width, height);
 
     // Draw new row at top
     const minDb = config.spectrumMinDb;
     const maxDb = config.spectrumMaxDb;
+    const pixelWidth = Math.ceil(width / data.length) + 1;
+
     for (let i = 0; i < data.length; i++) {
       const normalized = (data[i] - minDb) / (maxDb - minDb);
       const clamped = Math.max(0, Math.min(1, normalized));
+      // Blue (cold/weak) -> Red (hot/strong)
       const r = Math.floor(clamped * 255);
       const g = Math.floor(clamped * 128);
       const b = Math.floor((1 - clamped) * 255);
       ctx.fillStyle = `rgb(${r},${g},${b})`;
       const x = (i / data.length) * width;
-      const w = width / data.length + 1;
-      ctx.fillRect(x, 0, w, Math.ceil(rowHeight));
+      ctx.fillRect(x, 0, pixelWidth, rowHeight);
     }
-
-    waterfallBuffer.current = ctx.getImageData(0, 0, width, height);
   }, [spectrum]);
 
   return (

@@ -22,7 +22,10 @@ class Settings(BaseSettings):
     sdr_queue_size: int = 10
 
     # TLE
-    tle_url: str = "https://celestrak.org/NORAD/elements/gp.php?GROUP=weather&FORMAT=tle"
+    tle_urls: list[str] = [
+        "https://celestrak.org/NORAD/elements/gp.php?GROUP=noaa&FORMAT=tle",
+        "https://celestrak.org/NORAD/elements/gp.php?GROUP=weather&FORMAT=tle",
+    ]
     tle_timeout_s: float = 30.0
 
     # Link budget defaults

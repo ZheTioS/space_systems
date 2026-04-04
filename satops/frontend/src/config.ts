@@ -13,4 +13,5 @@ export const config = {
 
   // WebSocket
   wsReconnectDelayMs: Number(import.meta.env.VITE_WS_RECONNECT_DELAY_MS ?? 3000),
+  wsUrl: (import.meta.env.VITE_WS_URL as string) ?? "ws://127.0.0.1:8000/ws",
 } as const;

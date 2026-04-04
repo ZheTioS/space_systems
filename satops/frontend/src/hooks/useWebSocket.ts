@@ -11,8 +11,7 @@ export function useWebSocket() {
   const setWsConnected = useStore((s) => s.setWsConnected);
 
   useEffect(() => {
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
+    const ws = new WebSocket(config.wsUrl);
     wsRef.current = ws;
 
     ws.onopen = () => setWsConnected(true);
