@@ -187,3 +187,6 @@ dist/
 
 # Bun
 bun.lock
+
+# Claude
+CLAUDE.md
