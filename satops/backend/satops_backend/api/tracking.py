@@ -2,6 +2,7 @@ from datetime import datetime
 
 from fastapi import APIRouter, HTTPException
 
+from satops_backend.config import settings
 from satops_backend.db import get_db
 from satops_backend.services import tracking
 
@@ -33,6 +34,27 @@ async def get_position(norad_id: int) -> dict:
 async def get_passes(norad_id: int, hours: float = 24.0) -> list[dict]:
     """Get upcoming passes for a satellite."""
     return tracking.find_passes(norad_id, hours_ahead=hours)
+
+
+@router.get("/groundtrack/{norad_id}")
+async def get_ground_track(
+    norad_id: int,
+    minutes_behind: float = 45.0,
+    minutes_ahead: float = 45.0,
+) -> dict:
+    """Get ground track and current sub-satellite point."""
+    subpoint = tracking.compute_subsatellite_point(norad_id)
+    if subpoint is None:
+        raise HTTPException(status_code=404, detail=f"Satellite {norad_id} not found in TLE data")
+    track = tracking.compute_ground_track(norad_id, minutes_behind, minutes_ahead)
+    return {
+        "current": subpoint,
+        "track": track,
+        "observer": {
+            "lat": settings.observer_lat,
+            "lon": settings.observer_lon,
+        },
+    }
 
 
 @router.get("/doppler/{norad_id}")

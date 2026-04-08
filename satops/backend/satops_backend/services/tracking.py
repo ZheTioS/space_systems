@@ -89,6 +89,55 @@ def compute_position(norad_id: int, at_time: datetime | None = None) -> dict | N
     }
 
 
+def compute_subsatellite_point(norad_id: int, at_time: datetime | None = None) -> dict | None:
+    """Compute the sub-satellite point (lat/lon) for a satellite."""
+    sat = get_satellite(norad_id)
+    if sat is None:
+        return None
+
+    t = ts.from_datetime(at_time) if at_time else ts.now()
+    geocentric = sat.at(t)
+    subpoint = wgs84.subpoint(geocentric)
+
+    return {
+        "lat": subpoint.latitude.degrees,
+        "lon": subpoint.longitude.degrees,
+        "altitude_km": subpoint.elevation.km,
+    }
+
+
+def compute_ground_track(
+    norad_id: int,
+    minutes_behind: float = 45.0,
+    minutes_ahead: float = 45.0,
+    num_points: int = 180,
+) -> list[dict]:
+    """Compute ground track as a series of lat/lon points."""
+    sat = get_satellite(norad_id)
+    if sat is None:
+        return []
+
+    t_now = ts.now()
+    total_minutes = minutes_behind + minutes_ahead
+    step_minutes = total_minutes / num_points
+
+    points = []
+    for i in range(num_points + 1):
+        offset_minutes = -minutes_behind + i * step_minutes
+        t = ts.tt_jd(t_now.tt + offset_minutes / 1440.0)
+        geocentric = sat.at(t)
+        subpoint = wgs84.subpoint(geocentric)
+        points.append(
+            {
+                "lat": subpoint.latitude.degrees,
+                "lon": subpoint.longitude.degrees,
+                "time_offset_min": round(offset_minutes, 1),
+            }
+        )
+
+    return points
+
+
 def compute_doppler(velocity_km_s: float, frequency_hz: int) -> float:
     """Compute Doppler shift given range rate and carrier frequency."""
     c = 299_792.458  # km/s

@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { TopBar } from "./components/TopBar/TopBar";
 import { PassPanel } from "./components/PassPanel/PassPanel";
 import { SpectrumPanel } from "./components/SpectrumPanel/SpectrumPanel";
+import { GroundTrackPanel } from "./components/GroundTrackPanel/GroundTrackPanel";
 import { LinkBudgetPanel } from "./components/LinkBudgetPanel/LinkBudgetPanel";
 import { PassHistory } from "./components/PassHistory/PassHistory";
 import { useWebSocket } from "./hooks/useWebSocket";
@@ -25,8 +26,11 @@ function App() {
         {/* Left panel */}
         <PassPanel />
 
-        {/* Center panel */}
-        <SpectrumPanel />
+        {/* Center panel — spectrum + ground track */}
+        <div className="flex flex-col gap-2 overflow-hidden">
+          <SpectrumPanel />
+          <GroundTrackPanel />
+        </div>
 
         {/* Right panel */}
         <LinkBudgetPanel />

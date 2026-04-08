@@ -1,4 +1,4 @@
-import type { Satellite, SatellitePass, SdrStatus, Observation } from "../types";
+import type { Satellite, SatellitePass, SdrStatus, Observation, GroundTrack } from "../types";
 
 const BASE = "/api";
 
@@ -16,6 +16,9 @@ export const api = {
 
   getPosition: (noradId: number) =>
     fetchJson<Record<string, number>>(`/tracking/position/${noradId}`),
+
+  getGroundTrack: (noradId: number) =>
+    fetchJson<GroundTrack>(`/tracking/groundtrack/${noradId}`),
 
   refreshTles: () => fetchJson<{ loaded: number }>("/tracking/tle/refresh", { method: "POST" }),
 
