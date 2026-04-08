@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import type {
+  ActivePassUpdate,
   Satellite,
   SatellitePass,
   TrackingUpdate,
@@ -31,6 +32,10 @@ interface SatOpsState {
   linkBudget: LinkBudgetUpdate | null;
   setLinkBudget: (update: LinkBudgetUpdate) => void;
 
+  // Active pass
+  activePass: ActivePassUpdate | null;
+  setActivePass: (update: ActivePassUpdate | null) => void;
+
   // SDR
   sdrStatus: SdrStatus;
   setSdrStatus: (status: SdrStatus) => void;
@@ -57,6 +62,9 @@ export const useStore = create<SatOpsState>((set) => ({
 
   linkBudget: null,
   setLinkBudget: (linkBudget) => set({ linkBudget }),
+
+  activePass: null,
+  setActivePass: (activePass) => set({ activePass }),
 
   sdrStatus: { connected: false, driver: null, frequency_hz: null, sample_rate: null, gain: null },
   setSdrStatus: (sdrStatus) => set({ sdrStatus }),

@@ -8,6 +8,7 @@ export function useWebSocket() {
   const setTracking = useStore((s) => s.setTracking);
   const setSpectrum = useStore((s) => s.setSpectrum);
   const setLinkBudget = useStore((s) => s.setLinkBudget);
+  const setActivePass = useStore((s) => s.setActivePass);
   const setWsConnected = useStore((s) => s.setWsConnected);
   const selectedSatellite = useStore((s) => s.selectedSatellite);
 
@@ -37,13 +38,16 @@ export function useWebSocket() {
         case "link_budget":
           setLinkBudget(data);
           break;
+        case "active_pass":
+          setActivePass(data);
+          break;
       }
     };
 
     return () => {
       ws.close();
     };
-  }, [setTracking, setSpectrum, setLinkBudget, setWsConnected]);
+  }, [setTracking, setSpectrum, setLinkBudget, setActivePass, setWsConnected]);
 
   // Send satellite selection to backend when it changes
   useEffect(() => {

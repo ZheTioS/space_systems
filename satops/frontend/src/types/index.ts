@@ -21,6 +21,14 @@ export interface TrackingUpdate {
   range_km: number;
   velocity_km_s: number;
   doppler_hz: number;
+  lat?: number;
+  lon?: number;
+}
+
+export interface GroundTrack {
+  current: { lat: number; lon: number; altitude_km: number };
+  track: { lat: number; lon: number; time_offset_min: number }[];
+  observer: { lat: number; lon: number };
 }
 
 export interface SpectrumUpdate {
@@ -58,4 +66,14 @@ export interface Observation {
   notes: string | null;
 }
 
-export type WsEvent = TrackingUpdate | SpectrumUpdate | LinkBudgetUpdate;
+export interface ActivePassUpdate {
+  type: "active_pass";
+  timestamp: string;
+  satellite: string;
+  aos: string;
+  max_elevation: number;
+  peak_signal: number | null;
+  samples: number;
+}
+
+export type WsEvent = TrackingUpdate | SpectrumUpdate | LinkBudgetUpdate | ActivePassUpdate;

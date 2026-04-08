@@ -11,6 +11,7 @@ from satops_backend.config import settings
 from satops_backend.db import get_db
 from satops_backend.services import tracking
 from satops_backend.services.link_budget import LinkBudgetInput, compute_link_budget
+from satops_backend.services.pass_tracker import pass_tracker
 from satops_backend.services.sdr import sdr_service
 
 logger = logging.getLogger(__name__)
@@ -67,21 +68,25 @@ async def websocket_endpoint(ws: WebSocket) -> None:
 
             # Tracking update
             pos = tracking.compute_position(norad_id)
+            subpoint = tracking.compute_subsatellite_point(norad_id)
+            snr_db = None
             if pos and pos["elevation_deg"] > settings.tracking_elevation_threshold_deg:
                 doppler = tracking.compute_doppler(pos["velocity_km_s"], frequency_hz)
 
-                await ws.send_json(
-                    {
-                        "type": "tracking_update",
-                        "timestamp": now.isoformat(),
-                        "satellite": name,
-                        "azimuth_deg": round(pos["azimuth_deg"], 2),
-                        "elevation_deg": round(pos["elevation_deg"], 2),
-                        "range_km": round(pos["range_km"], 2),
-                        "velocity_km_s": round(pos["velocity_km_s"], 4),
-                        "doppler_hz": round(doppler, 1),
-                    }
-                )
+                msg = {
+                    "type": "tracking_update",
+                    "timestamp": now.isoformat(),
+                    "satellite": name,
+                    "azimuth_deg": round(pos["azimuth_deg"], 2),
+                    "elevation_deg": round(pos["elevation_deg"], 2),
+                    "range_km": round(pos["range_km"], 2),
+                    "velocity_km_s": round(pos["velocity_km_s"], 4),
+                    "doppler_hz": round(doppler, 1),
+                }
+                if subpoint:
+                    msg["lat"] = round(subpoint["lat"], 4)
+                    msg["lon"] = round(subpoint["lon"], 4)
+                await ws.send_json(msg)
 
                 # Link budget (only when satellite is above horizon)
                 if pos["elevation_deg"] > 0:
@@ -91,6 +96,7 @@ async def websocket_endpoint(ws: WebSocket) -> None:
                             range_km=pos["range_km"],
                         )
                     )
+                    snr_db = lb.snr_db
                     await ws.send_json(
                         {
                             "type": "link_budget",
@@ -99,6 +105,29 @@ async def websocket_endpoint(ws: WebSocket) -> None:
                             "received_power_dbm": lb.received_power_dbm,
                             "noise_power_dbm": lb.noise_power_dbm,
                             "snr_db": lb.snr_db,
+                        }
+                    )
+
+            # Pass tracking — auto-log observations on AOS/LOS
+            if pos:
+                await pass_tracker.update(
+                    norad_id=norad_id,
+                    satellite_name=name,
+                    elevation_deg=pos["elevation_deg"],
+                    signal_db=lb.received_power_dbm if snr_db is not None else None,
+                    snr_db=snr_db,
+                )
+                active = pass_tracker.active_passes.get(norad_id)
+                if active:
+                    await ws.send_json(
+                        {
+                            "type": "active_pass",
+                            "timestamp": now.isoformat(),
+                            "satellite": name,
+                            "aos": active.aos.isoformat(),
+                            "max_elevation": round(active.max_elevation, 1),
+                            "peak_signal": round(active.peak_signal, 1) if active.peak_signal > -999 else None,
+                            "samples": len(active.snr_samples),
                         }
                     )
 
