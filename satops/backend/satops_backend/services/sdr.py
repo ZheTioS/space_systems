@@ -30,6 +30,7 @@ except ImportError:
 class SdrService:
     def __init__(self) -> None:
         self._connected = False
+        self._use_hardware = False
         self._device = None
         self._stream = None
         self._frequency_hz = settings.sdr_frequency_hz
@@ -55,15 +56,23 @@ class SdrService:
         """Connect to SDR hardware, or start synthetic mode."""
         if HAS_SOAPY:
             try:
-                self._device = _SoapySDR.Device({"driver": settings.sdr_driver})
+                # SoapySDR Python bindings require SoapySDRKwargs, not plain dicts.
+                # Use enumerate() result to get the right type.
+                devices = _SoapySDR.Device.enumerate({"driver": settings.sdr_driver})
+                if not devices:
+                    logger.warning("No SDR devices found for driver=%s, using synthetic mode", settings.sdr_driver)
+                    self._connected = True
+                    return self._connected
+                self._device = _SoapySDR.Device(devices[0])
                 self._device.setSampleRate(_SoapySDR.SOAPY_SDR_RX, 0, self._sample_rate)
                 self._device.setFrequency(_SoapySDR.SOAPY_SDR_RX, 0, self._frequency_hz)
                 self._device.setGain(_SoapySDR.SOAPY_SDR_RX, 0, self._gain)
                 self._connected = True
+                self._use_hardware = True
                 logger.info("Connected to SDR: %s", settings.sdr_driver)
             except Exception:
-                logger.exception("Failed to connect to SDR hardware")
-                self._connected = True  # Synthetic fallback
+                logger.exception("Failed to connect to SDR hardware, falling back to synthetic mode")
+                self._connected = True
         else:
             self._connected = True  # Synthetic mode
 
@@ -74,7 +83,7 @@ class SdrService:
         self._running = False
         if self._thread and self._thread.is_alive():
             self._thread.join(timeout=2.0)
-        if self._device and HAS_SOAPY:
+        if self._device and self._use_hardware:
             if self._stream:
                 self._device.deactivateStream(self._stream)
                 self._device.closeStream(self._stream)
@@ -94,16 +103,29 @@ class SdrService:
     def _read_loop(self) -> None:
         """Background thread: read IQ samples, compute FFT, push to queue."""
         while self._running:
-            if HAS_SOAPY and self._device:
+            if self._use_hardware and self._device:
                 self._read_hardware()
             else:
                 self._generate_synthetic()
             time.sleep(1.0 / settings.sdr_update_rate_hz)
 
     def _read_hardware(self) -> None:
-        """Read from real SDR hardware."""
-        # TODO: implement real SoapySDR readStream
-        self._generate_synthetic()
+        """Read IQ samples from real SDR hardware, compute FFT."""
+        if not self._stream:
+            self._stream = self._device.setupStream(_SoapySDR.SOAPY_SDR_RX, _SoapySDR.SOAPY_SDR_CS8)
+            self._device.activateStream(self._stream)
+
+        buff = np.array([0] * self._fft_size * 2, np.int8)
+        sr = self._device.readStream(self._stream, [buff], self._fft_size)
+
+        if sr.ret > 0:
+            # Convert interleaved I/Q int8 to complex float
+            iq = buff[: sr.ret * 2].astype(np.float32).view(np.complex64)
+            # Compute FFT magnitude in dB
+            fft_vals = np.fft.fftshift(np.fft.fft(iq, self._fft_size))
+            magnitude = 20 * np.log10(np.abs(fft_vals) + 1e-10)
+            if self._loop and not self._queue.full():
+                self._loop.call_soon_threadsafe(self._queue.put_nowait, magnitude)
 
     def _generate_synthetic(self) -> None:
         """Generate synthetic spectrum data for development."""
@@ -124,12 +146,12 @@ class SdrService:
 
     async def set_frequency(self, frequency_hz: int) -> None:
         self._frequency_hz = frequency_hz
-        if HAS_SOAPY and self._device:
+        if self._use_hardware and self._device:
             self._device.setFrequency(_SoapySDR.SOAPY_SDR_RX, 0, frequency_hz)
 
     async def set_gain(self, gain: float) -> None:
         self._gain = gain
-        if HAS_SOAPY and self._device:
+        if self._use_hardware and self._device:
             self._device.setGain(_SoapySDR.SOAPY_SDR_RX, 0, gain)
 
 

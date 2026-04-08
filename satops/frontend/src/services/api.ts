@@ -21,6 +21,9 @@ export const api = {
 
   getSdrStatus: () => fetchJson<SdrStatus>("/sdr/status"),
 
+  setFrequency: (frequencyHz: number) =>
+    fetchJson<SdrStatus>(`/sdr/frequency?frequency_hz=${frequencyHz}`, { method: "POST" }),
+
   getObservations: (limit = 50) => fetchJson<Observation[]>(`/observations/?limit=${limit}`),
 
   health: () => fetchJson<{ status: string; sdr: SdrStatus }>("/health"),

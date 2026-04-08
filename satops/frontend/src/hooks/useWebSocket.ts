@@ -9,6 +9,7 @@ export function useWebSocket() {
   const setSpectrum = useStore((s) => s.setSpectrum);
   const setLinkBudget = useStore((s) => s.setLinkBudget);
   const setWsConnected = useStore((s) => s.setWsConnected);
+  const selectedSatellite = useStore((s) => s.selectedSatellite);
 
   useEffect(() => {
     const ws = new WebSocket(config.wsUrl);
@@ -43,4 +44,15 @@ export function useWebSocket() {
       ws.close();
     };
   }, [setTracking, setSpectrum, setLinkBudget, setWsConnected]);
+
+  // Send satellite selection to backend when it changes
+  useEffect(() => {
+    const ws = wsRef.current;
+    if (ws && ws.readyState === WebSocket.OPEN && selectedSatellite) {
+      ws.send(JSON.stringify({
+        type: "select_satellite",
+        norad_id: selectedSatellite.norad_id,
+      }));
+    }
+  }, [selectedSatellite]);
 }

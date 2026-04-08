@@ -19,6 +19,7 @@ export function PassPanel() {
   useEffect(() => {
     if (selectedSatellite) {
       api.getPasses(selectedSatellite.norad_id).then(setPasses);
+      api.setFrequency(selectedSatellite.frequency_hz);
     }
   }, [selectedSatellite, setPasses]);
 

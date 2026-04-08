@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     tle_urls: list[str] = [
         "https://celestrak.org/NORAD/elements/gp.php?GROUP=noaa&FORMAT=tle",
         "https://celestrak.org/NORAD/elements/gp.php?GROUP=weather&FORMAT=tle",
+        "https://celestrak.org/NORAD/elements/gp.php?GROUP=amateur&FORMAT=tle",
     ]
     tle_timeout_s: float = 30.0
 
