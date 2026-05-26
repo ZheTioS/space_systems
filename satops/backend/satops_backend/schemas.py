@@ -93,6 +93,7 @@ class LinkBudgetResult(BaseModel):
 
 class SdrStatus(BaseModel):
     connected: bool
+    mode: str = "synthetic"  # "hardware" | "synthetic"
     driver: str | None = None
     frequency_hz: int | None = None
     sample_rate: int | None = None

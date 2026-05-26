@@ -41,11 +41,16 @@ class SdrService:
         self._queue: asyncio.Queue[NDArray[np.float64]] = asyncio.Queue(maxsize=settings.sdr_queue_size)
         self._loop: asyncio.AbstractEventLoop | None = None
         self._fft_size = settings.sdr_fft_size
+        # Serialises every libSoapySDR / librtlsdr call. The read thread and the
+        # asyncio set_frequency/set_gain handlers both touch the device; without
+        # this, concurrent calls trigger librtlsdr "setFrequency failed" errors.
+        self._device_lock = threading.Lock()
 
     @property
     def status(self) -> SdrStatus:
         return SdrStatus(
             connected=self._connected,
+            mode="hardware" if self._use_hardware else "synthetic",
             driver=settings.sdr_driver if self._connected else None,
             frequency_hz=self._frequency_hz if self._connected else None,
             sample_rate=self._sample_rate if self._connected else None,
@@ -53,42 +58,68 @@ class SdrService:
         )
 
     async def connect(self) -> bool:
-        """Connect to SDR hardware, or start synthetic mode."""
-        if HAS_SOAPY:
-            try:
-                # SoapySDR Python bindings require SoapySDRKwargs, not plain dicts.
-                # Use enumerate() result to get the right type.
-                devices = _SoapySDR.Device.enumerate({"driver": settings.sdr_driver})
-                if not devices:
-                    logger.warning("No SDR devices found for driver=%s, using synthetic mode", settings.sdr_driver)
-                    self._connected = True
-                    return self._connected
-                self._device = _SoapySDR.Device(devices[0])
-                self._device.setSampleRate(_SoapySDR.SOAPY_SDR_RX, 0, self._sample_rate)
-                self._device.setFrequency(_SoapySDR.SOAPY_SDR_RX, 0, self._frequency_hz)
-                self._device.setGain(_SoapySDR.SOAPY_SDR_RX, 0, self._gain)
+        """Connect to SDR hardware, or start synthetic mode.
+
+        Every exit path explicitly sets ``_use_hardware`` and ``_device`` so the
+        read loop's ``if self._use_hardware and self._device`` check can never
+        observe inconsistent stale state — e.g. ``_use_hardware=True`` left over
+        from a prior successful connect while ``_device`` is now ``None``,
+        which would silently flip the service into synthetic mode with no
+        error visible to callers.
+        """
+        if not HAS_SOAPY:
+            logger.info("SoapySDR not installed — synthetic mode")
+            self._use_hardware = False
+            self._device = None
+            self._connected = True
+            return self._connected
+
+        try:
+            devices = _SoapySDR.Device.enumerate({"driver": settings.sdr_driver})
+            if not devices:
+                logger.warning("No SDR devices found for driver=%s — synthetic mode", settings.sdr_driver)
+                self._use_hardware = False
+                self._device = None
                 self._connected = True
-                self._use_hardware = True
-                logger.info("Connected to SDR: %s", settings.sdr_driver)
-            except Exception:
-                logger.exception("Failed to connect to SDR hardware, falling back to synthetic mode")
-                self._connected = True
-        else:
-            self._connected = True  # Synthetic mode
+                return self._connected
+            device = _SoapySDR.Device(devices[0])
+            device.setSampleRate(_SoapySDR.SOAPY_SDR_RX, 0, self._sample_rate)
+            device.setFrequency(_SoapySDR.SOAPY_SDR_RX, 0, self._frequency_hz)
+            device.setGain(_SoapySDR.SOAPY_SDR_RX, 0, self._gain)
+            # Only commit the device handle after every config call succeeds,
+            # so a partial init can't leave us with a half-configured device.
+            self._device = device
+            self._use_hardware = True
+            self._connected = True
+            logger.info(
+                "Connected to SDR hardware: %s @ %.3f MHz, gain %.1f dB",
+                settings.sdr_driver,
+                self._frequency_hz / 1e6,
+                self._gain,
+            )
+        except Exception:
+            logger.exception("SDR hardware init failed — synthetic mode")
+            self._device = None
+            self._use_hardware = False
+            self._connected = True
 
         return self._connected
 
     async def disconnect(self) -> None:
-        """Stop streaming and disconnect."""
+        """Stop streaming, release hardware, and reset state."""
         self._running = False
         if self._thread and self._thread.is_alive():
             self._thread.join(timeout=2.0)
-        if self._device and self._use_hardware:
-            if self._stream:
-                self._device.deactivateStream(self._stream)
-                self._device.closeStream(self._stream)
-                self._stream = None
-            self._device = None
+        if self._device is not None and self._use_hardware:
+            try:
+                if self._stream:
+                    self._device.deactivateStream(self._stream)
+                    self._device.closeStream(self._stream)
+            except Exception:
+                logger.exception("Error releasing SDR stream during disconnect")
+        self._stream = None
+        self._device = None
+        self._use_hardware = False
         self._connected = False
 
     async def start_streaming(self) -> None:
@@ -111,17 +142,17 @@ class SdrService:
 
     def _read_hardware(self) -> None:
         """Read IQ samples from real SDR hardware, compute FFT."""
-        if not self._stream:
-            self._stream = self._device.setupStream(_SoapySDR.SOAPY_SDR_RX, _SoapySDR.SOAPY_SDR_CS8)
-            self._device.activateStream(self._stream)
-
         buff = np.array([0] * self._fft_size * 2, np.int8)
-        sr = self._device.readStream(self._stream, [buff], self._fft_size)
+        with self._device_lock:
+            if not self._stream:
+                self._stream = self._device.setupStream(_SoapySDR.SOAPY_SDR_RX, _SoapySDR.SOAPY_SDR_CS8)
+                self._device.activateStream(self._stream)
+            sr = self._device.readStream(self._stream, [buff], self._fft_size)
 
         if sr.ret > 0:
             # Convert interleaved I/Q int8 to complex float
             iq = buff[: sr.ret * 2].astype(np.float32).view(np.complex64)
-            # Compute FFT magnitude in dB
+            # Compute FFT magnitude in dB (outside lock — pure numpy).
             fft_vals = np.fft.fftshift(np.fft.fft(iq, self._fft_size))
             magnitude = 20 * np.log10(np.abs(fft_vals) + 1e-10)
             if self._loop and not self._queue.full():
@@ -145,14 +176,40 @@ class SdrService:
             return None
 
     async def set_frequency(self, frequency_hz: int) -> None:
-        self._frequency_hz = frequency_hz
+        # Only commit the field update once the hardware confirms the retune,
+        # so ``status.frequency_hz`` never advertises a tune the radio hasn't
+        # actually performed. Retry with backoff because librtlsdr occasionally
+        # returns -EAGAIN when a USB transfer from a prior readStream is still
+        # in flight even after the read lock is released.
         if self._use_hardware and self._device:
-            self._device.setFrequency(_SoapySDR.SOAPY_SDR_RX, 0, frequency_hz)
+            await self._call_device(
+                lambda: self._device.setFrequency(_SoapySDR.SOAPY_SDR_RX, 0, frequency_hz),
+                what=f"setFrequency({frequency_hz})",
+            )
+        self._frequency_hz = frequency_hz
 
     async def set_gain(self, gain: float) -> None:
-        self._gain = gain
         if self._use_hardware and self._device:
-            self._device.setGain(_SoapySDR.SOAPY_SDR_RX, 0, gain)
+            await self._call_device(
+                lambda: self._device.setGain(_SoapySDR.SOAPY_SDR_RX, 0, gain),
+                what=f"setGain({gain})",
+            )
+        self._gain = gain
+
+    async def _call_device(self, fn, *, what: str, attempts: int = 3) -> None:
+        """Run a librtlsdr/SoapySDR device call under the lock with retry."""
+        last_exc: Exception | None = None
+        for attempt in range(attempts):
+            try:
+                with self._device_lock:
+                    fn()
+                return
+            except RuntimeError as exc:
+                last_exc = exc
+                await asyncio.sleep(0.05 * (attempt + 1))
+        logger.error("%s failed after %d attempts: %s", what, attempts, last_exc)
+        if last_exc is not None:
+            raise last_exc
 
 
 # Singleton
