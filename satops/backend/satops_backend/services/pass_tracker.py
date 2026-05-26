@@ -1,9 +1,11 @@
 """Pass session tracker — detects AOS/LOS and auto-logs observations."""
 
+import asyncio
 import logging
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
+from satops_backend.config import settings
 from satops_backend.db import get_db
 
 logger = logging.getLogger(__name__)
@@ -24,6 +26,7 @@ class ActivePass:
 class PassTracker:
     def __init__(self) -> None:
         self._active: dict[int, ActivePass] = {}  # norad_id -> ActivePass
+        self._lock = asyncio.Lock()
 
     @property
     def active_passes(self) -> dict[int, ActivePass]:
@@ -38,21 +41,24 @@ class PassTracker:
         snr_db: float | None = None,
     ) -> None:
         """Call on every tracking update. Handles AOS/LOS transitions."""
-        is_visible = elevation_deg > 0
+        # AOS threshold matches find_passes' min_pass_elevation_deg so the
+        # predicted upcoming-passes list and auto-logged observations agree.
+        is_visible = elevation_deg > settings.min_pass_elevation_deg
 
-        if is_visible and norad_id not in self._active:
-            await self._start_pass(norad_id, satellite_name, elevation_deg)
+        async with self._lock:
+            if is_visible and norad_id not in self._active:
+                await self._start_pass(norad_id, satellite_name, elevation_deg)
 
-        if norad_id in self._active:
-            ap = self._active[norad_id]
-            ap.max_elevation = max(ap.max_elevation, elevation_deg)
-            if signal_db is not None:
-                ap.peak_signal = max(ap.peak_signal, signal_db)
-            if snr_db is not None:
-                ap.snr_samples.append(snr_db)
+            if norad_id in self._active:
+                ap = self._active[norad_id]
+                ap.max_elevation = max(ap.max_elevation, elevation_deg)
+                if signal_db is not None:
+                    ap.peak_signal = max(ap.peak_signal, signal_db)
+                if snr_db is not None:
+                    ap.snr_samples.append(snr_db)
 
-        if not is_visible and norad_id in self._active:
-            await self._end_pass(norad_id)
+            if not is_visible and norad_id in self._active:
+                await self._end_pass(norad_id)
 
     async def _start_pass(self, norad_id: int, name: str, elevation: float) -> None:
         """Record AOS — insert pass row into DB."""
