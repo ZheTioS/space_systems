@@ -19,15 +19,15 @@ function App() {
   }, [setSdrStatus]);
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden">
+    <div className="h-screen grid grid-rows-[auto_1fr_auto] overflow-hidden">
       <TopBar />
 
-      <div className="flex-1 grid grid-cols-[240px_1fr_260px] gap-2 p-2 overflow-hidden">
+      <div className="grid grid-cols-[240px_1fr_260px] gap-2 p-2 min-h-0">
         {/* Left panel */}
         <PassPanel />
 
         {/* Center panel — spectrum + ground track */}
-        <div className="flex flex-col gap-2 overflow-hidden">
+        <div className="grid grid-rows-[1fr_1fr] gap-2 min-h-0">
           <SpectrumPanel />
           <GroundTrackPanel />
         </div>

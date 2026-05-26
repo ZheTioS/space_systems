@@ -83,15 +83,15 @@ export function SpectrumPanel() {
   }, [spectrum]);
 
   return (
-    <div className="flex flex-col gap-2 p-3 bg-panel rounded border border-panel-border h-full">
+    <div className="flex flex-col gap-2 p-3 bg-panel rounded border border-panel-border min-h-0 overflow-hidden">
       <h2 className="text-xs font-bold text-text-secondary uppercase tracking-widest">
         Spectrum
       </h2>
       <canvas
         ref={spectrumCanvasRef}
         width={800}
-        height={200}
-        className="w-full rounded bg-surface"
+        height={150}
+        className="w-full flex-1 min-h-0 rounded bg-surface"
         style={{ imageRendering: "pixelated" }}
       />
 
@@ -101,8 +101,8 @@ export function SpectrumPanel() {
       <canvas
         ref={waterfallCanvasRef}
         width={800}
-        height={200}
-        className="w-full rounded bg-surface flex-1"
+        height={300}
+        className="w-full flex-[2] min-h-0 rounded bg-surface"
         style={{ imageRendering: "pixelated" }}
       />
     </div>
