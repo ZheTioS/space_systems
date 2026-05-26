@@ -20,13 +20,13 @@ router = APIRouter()
 
 
 async def _get_satellite(norad_id: int | None = None) -> dict | None:
-    """Get a satellite from DB by norad_id, or the first one as default."""
+    """Get a satellite from DB by norad_id, or the lowest-norad-id one as default."""
     db = await get_db()
     try:
         if norad_id:
             cursor = await db.execute("SELECT * FROM satellite WHERE norad_id = ?", (norad_id,))
         else:
-            cursor = await db.execute("SELECT * FROM satellite LIMIT 1")
+            cursor = await db.execute("SELECT * FROM satellite ORDER BY norad_id LIMIT 1")
         row = await cursor.fetchone()
         return dict(row) if row else None
     finally:
@@ -49,17 +49,26 @@ async def websocket_endpoint(ws: WebSocket) -> None:
         while True:
             try:
                 raw = await ws.receive_text()
-                msg = json.loads(raw)
-                if msg.get("type") == "select_satellite":
-                    new_sat = await _get_satellite(msg["norad_id"])
-                    if new_sat:
-                        satellite = new_sat
-                        logger.info("Switched to satellite: %s", new_sat["name"])
             except (WebSocketDisconnect, RuntimeError):
                 break
+            try:
+                msg = json.loads(raw)
+            except json.JSONDecodeError:
+                logger.warning("Discarding non-JSON WS message: %r", raw[:100])
+                continue
+            if msg.get("type") == "select_satellite":
+                norad_id = msg.get("norad_id")
+                if not isinstance(norad_id, int):
+                    logger.warning("select_satellite missing/invalid norad_id: %r", msg)
+                    continue
+                new_sat = await _get_satellite(norad_id)
+                if new_sat:
+                    satellite = new_sat
+                    logger.info("Switched to satellite: %s", new_sat["name"])
 
     async def stream_updates() -> None:
         """Push tracking, spectrum, and link budget updates."""
+        prev_active_norad: int | None = None
         while True:
             norad_id = satellite["norad_id"]
             frequency_hz = satellite["frequency_hz"]
@@ -69,6 +78,7 @@ async def websocket_endpoint(ws: WebSocket) -> None:
             # Tracking update
             pos = tracking.compute_position(norad_id)
             subpoint = tracking.compute_subsatellite_point(norad_id)
+            lb = None
             snr_db = None
             if pos and pos["elevation_deg"] > settings.tracking_elevation_threshold_deg:
                 doppler = tracking.compute_doppler(pos["velocity_km_s"], frequency_hz)
@@ -114,7 +124,7 @@ async def websocket_endpoint(ws: WebSocket) -> None:
                     norad_id=norad_id,
                     satellite_name=name,
                     elevation_deg=pos["elevation_deg"],
-                    signal_db=lb.received_power_dbm if snr_db is not None else None,
+                    signal_db=lb.received_power_dbm if lb is not None else None,
                     snr_db=snr_db,
                 )
                 active = pass_tracker.active_passes.get(norad_id)
@@ -130,25 +140,34 @@ async def websocket_endpoint(ws: WebSocket) -> None:
                             "samples": len(active.snr_samples),
                         }
                     )
+                    prev_active_norad = norad_id
+                elif prev_active_norad is not None:
+                    await ws.send_json({"type": "active_pass_cleared", "timestamp": now.isoformat()})
+                    prev_active_norad = None
 
             # Spectrum update
             spectrum = await sdr_service.get_spectrum()
             if spectrum is not None:
+                sdr_status = sdr_service.status
                 await ws.send_json(
                     {
                         "type": "spectrum_update",
                         "timestamp": now.isoformat(),
                         "center_frequency_hz": frequency_hz,
-                        "bandwidth_hz": sdr_service._sample_rate,
+                        "bandwidth_hz": sdr_status.sample_rate,
                         "magnitudes_db": spectrum.tolist(),
                     }
                 )
 
             await asyncio.sleep(settings.ws_update_interval_s)
 
-    try:
-        await asyncio.gather(listen_for_commands(), stream_updates())
-    except WebSocketDisconnect:
-        logger.info("WebSocket client disconnected")
-    except Exception:
-        logger.exception("WebSocket error")
+    results = await asyncio.gather(
+        listen_for_commands(),
+        stream_updates(),
+        return_exceptions=True,
+    )
+    for r in results:
+        if isinstance(r, WebSocketDisconnect):
+            logger.info("WebSocket client disconnected")
+        elif isinstance(r, Exception):
+            logger.error("WebSocket task failed", exc_info=r)
