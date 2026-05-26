@@ -26,33 +26,60 @@ def get_observer() -> GeographicPosition:
 
 
 async def load_tles() -> dict[int, EarthSatellite]:
-    """Fetch TLE data from CelesTrak and parse into Skyfield satellites."""
+    """Fetch TLE data from CelesTrak and parse into Skyfield satellites.
+
+    Builds into a fresh dict and only swaps the global store on success, so
+    readers never observe an empty `_satellites` mid-refresh, and a total
+    fetch failure leaves the previously-loaded data intact.
+    """
     global _satellites
-    _satellites.clear()
+    new_satellites: dict[int, EarthSatellite] = {}
 
     async with httpx.AsyncClient() as client:
         for url in settings.tle_urls:
             try:
                 resp = await client.get(url, timeout=settings.tle_timeout_s)
                 resp.raise_for_status()
-                _parse_tle_text(resp.text)
+                _parse_tle_text(resp.text, new_satellites)
             except Exception:
                 logger.exception("Failed to fetch TLEs from %s", url)
 
+    if not new_satellites:
+        logger.error(
+            "Loaded 0 TLEs from %d source(s) — keeping previous data (%d entries)",
+            len(settings.tle_urls),
+            len(_satellites),
+        )
+        return _satellites
+
+    _satellites = new_satellites
     logger.info("Loaded %d TLEs", len(_satellites))
     return _satellites
 
 
-def _parse_tle_text(text: str) -> None:
-    """Parse 3-line TLE format and add to the satellite store."""
-    lines = text.strip().splitlines()
-    for i in range(0, len(lines) - 2, 3):
-        name = lines[i].strip()
-        line1 = lines[i + 1].strip()
-        line2 = lines[i + 2].strip()
-        sat = EarthSatellite(line1, line2, name, ts)
-        norad_id = int(line2.split()[1])
-        _satellites[norad_id] = sat
+def _parse_tle_text(text: str, target: dict[int, EarthSatellite]) -> None:
+    """Parse 3-line TLE format and add to ``target``.
+
+    Tolerates blank lines, comments, and stray content by anchoring on the
+    "1 " / "2 " line prefixes that every TLE pair carries; misaligned or
+    malformed entries are skipped with a warning instead of aborting the file.
+    """
+    lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
+    i = 0
+    while i + 2 < len(lines):
+        name = lines[i]
+        line1 = lines[i + 1]
+        line2 = lines[i + 2]
+        if line1.startswith("1 ") and line2.startswith("2 "):
+            try:
+                sat = EarthSatellite(line1, line2, name, ts)
+                norad_id = int(line2.split()[1])
+                target[norad_id] = sat
+            except Exception:
+                logger.warning("Skipping malformed TLE entry: %s", name)
+            i += 3
+        else:
+            i += 1
 
 
 def get_satellite(norad_id: int) -> EarthSatellite | None:
