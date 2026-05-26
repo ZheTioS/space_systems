@@ -56,11 +56,11 @@ export function GroundTrackPanel() {
         : null;
 
   return (
-    <div className="flex flex-col gap-2 p-3 bg-panel rounded border border-panel-border h-full">
-      <h2 className="text-xs font-bold text-text-secondary uppercase tracking-widest">
+    <div className="flex flex-col gap-2 p-3 bg-panel rounded border border-panel-border min-h-0 overflow-hidden">
+      <h2 className="text-xs font-bold text-text-secondary uppercase tracking-widest shrink-0">
         Ground Track
       </h2>
-      <div className="flex-1 rounded overflow-hidden" style={{ minHeight: 200 }}>
+      <div className="flex-1 min-h-[200px] rounded overflow-hidden">
         <MapContainer
           center={satPosition ?? [52.52, 13.405]}
           zoom={3}
@@ -111,7 +111,7 @@ export function GroundTrackPanel() {
             </CircleMarker>
           )}
 
-          <MapUpdater center={null} />
+          <MapUpdater center={satPosition} />
         </MapContainer>
       </div>
     </div>

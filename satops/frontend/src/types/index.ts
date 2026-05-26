@@ -76,4 +76,14 @@ export interface ActivePassUpdate {
   samples: number;
 }
 
-export type WsEvent = TrackingUpdate | SpectrumUpdate | LinkBudgetUpdate | ActivePassUpdate;
+export interface ActivePassClearedEvent {
+  type: "active_pass_cleared";
+  timestamp: string;
+}
+
+export type WsEvent =
+  | TrackingUpdate
+  | SpectrumUpdate
+  | LinkBudgetUpdate
+  | ActivePassUpdate
+  | ActivePassClearedEvent;

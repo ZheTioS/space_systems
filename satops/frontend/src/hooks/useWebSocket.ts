@@ -1,10 +1,14 @@
 import { useEffect, useRef } from "react";
 import { config } from "../config";
 import { useStore } from "../store";
-import type { WsEvent } from "../types";
+import type { Satellite, WsEvent } from "../types";
 
 export function useWebSocket() {
   const wsRef = useRef<WebSocket | null>(null);
+  const reconnectTimerRef = useRef<number | null>(null);
+  const cancelledRef = useRef(false);
+  const selectedRef = useRef<Satellite | null>(null);
+
   const setTracking = useStore((s) => s.setTracking);
   const setSpectrum = useStore((s) => s.setSpectrum);
   const setLinkBudget = useStore((s) => s.setLinkBudget);
@@ -13,50 +17,83 @@ export function useWebSocket() {
   const selectedSatellite = useStore((s) => s.selectedSatellite);
 
   useEffect(() => {
-    const ws = new WebSocket(config.wsUrl);
-    wsRef.current = ws;
-
-    ws.onopen = () => setWsConnected(true);
-    ws.onclose = () => {
-      setWsConnected(false);
-      setTimeout(() => {
-        if (wsRef.current === ws) {
-          wsRef.current = null;
-        }
-      }, config.wsReconnectDelayMs);
-    };
-
-    ws.onmessage = (event) => {
-      const data: WsEvent = JSON.parse(event.data);
-      switch (data.type) {
-        case "tracking_update":
-          setTracking(data);
-          break;
-        case "spectrum_update":
-          setSpectrum(data);
-          break;
-        case "link_budget":
-          setLinkBudget(data);
-          break;
-        case "active_pass":
-          setActivePass(data);
-          break;
-      }
-    };
-
-    return () => {
-      ws.close();
-    };
-  }, [setTracking, setSpectrum, setLinkBudget, setActivePass, setWsConnected]);
-
-  // Send satellite selection to backend when it changes
-  useEffect(() => {
+    selectedRef.current = selectedSatellite;
     const ws = wsRef.current;
     if (ws && ws.readyState === WebSocket.OPEN && selectedSatellite) {
-      ws.send(JSON.stringify({
-        type: "select_satellite",
-        norad_id: selectedSatellite.norad_id,
-      }));
+      ws.send(
+        JSON.stringify({
+          type: "select_satellite",
+          norad_id: selectedSatellite.norad_id,
+        }),
+      );
     }
   }, [selectedSatellite]);
+
+  useEffect(() => {
+    cancelledRef.current = false;
+
+    const connect = (): void => {
+      if (cancelledRef.current) return;
+      const ws = new WebSocket(config.wsUrl);
+      wsRef.current = ws;
+
+      ws.onopen = () => {
+        setWsConnected(true);
+        const sat = selectedRef.current;
+        if (sat) {
+          ws.send(
+            JSON.stringify({ type: "select_satellite", norad_id: sat.norad_id }),
+          );
+        }
+      };
+
+      ws.onclose = () => {
+        setWsConnected(false);
+        if (wsRef.current === ws) wsRef.current = null;
+        if (!cancelledRef.current) {
+          reconnectTimerRef.current = window.setTimeout(
+            connect,
+            config.wsReconnectDelayMs,
+          );
+        }
+      };
+
+      ws.onmessage = (event) => {
+        const data: WsEvent = JSON.parse(event.data);
+        switch (data.type) {
+          case "tracking_update":
+            setTracking(data);
+            break;
+          case "spectrum_update":
+            setSpectrum(data);
+            break;
+          case "link_budget":
+            setLinkBudget(data);
+            break;
+          case "active_pass":
+            setActivePass(data);
+            break;
+          case "active_pass_cleared":
+            setActivePass(null);
+            break;
+        }
+      };
+    };
+
+    connect();
+
+    return () => {
+      cancelledRef.current = true;
+      if (reconnectTimerRef.current !== null) {
+        window.clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
+      const ws = wsRef.current;
+      if (ws) {
+        ws.onclose = null;
+        ws.close();
+        wsRef.current = null;
+      }
+    };
+  }, [setTracking, setSpectrum, setLinkBudget, setActivePass, setWsConnected]);
 }

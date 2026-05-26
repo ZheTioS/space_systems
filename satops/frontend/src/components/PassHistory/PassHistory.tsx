@@ -34,7 +34,7 @@ export function PassHistory() {
             <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
             <span className="text-accent">
               ACTIVE: {activePass.satellite} — El {activePass.max_elevation}°
-              {activePass.peak_signal != null && ` — Peak ${activePass.peak_signal} dB`}
+              {activePass.peak_signal != null && ` — Peak ${activePass.peak_signal} dBm`}
             </span>
           </div>
         )}
