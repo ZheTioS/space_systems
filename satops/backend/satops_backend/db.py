@@ -29,12 +29,15 @@ CREATE TABLE IF NOT EXISTS observation (
 );
 """
 
+# Only satellites known to be transmitting in VHF/UHF as of 2026-05.
+# All three NOAA APT birds (15/18/19) were decommissioned in mid-2025 and removed
+# from this list. ISS APRS migrated to 437.825 MHz UHF; the legacy 145.825 MHz
+# VHF digipeater has been inactive since a Service Module radio outage in Nov 2025.
 DEFAULT_SATELLITES = [
-    ("NOAA 18", 28654, 137_912_500),
-    ("NOAA 19", 33591, 137_100_000),
     ("METEOR-M2 3", 57166, 137_900_000),
     ("METEOR-M2 4", 59051, 137_100_000),
     ("FUNCUBE-1", 39444, 145_935_000),
+    ("ISS (ZARYA)", 25544, 437_825_000),
 ]
 
 

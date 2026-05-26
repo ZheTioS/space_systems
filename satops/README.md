@@ -83,13 +83,14 @@ Key settings:
 
 ## Target Satellites
 
-Pre-configured for NOAA weather satellites at ~137 MHz:
+Verified operational as of May 2026. NOAA 15/18/19 were decommissioned in mid-2025 (end of the APT era) and are no longer seeded.
 
-| Satellite | NORAD ID | Frequency |
-|---|---|---|
-| NOAA 15 | 25338 | 137.620 MHz |
-| NOAA 18 | 28654 | 137.9125 MHz |
-| NOAA 19 | 33591 | 137.100 MHz |
+| Satellite | NORAD ID | Frequency | Notes |
+|---|---|---|---|
+| METEOR-M2 3 | 57166 | 137.900 MHz | LRPT, continuous when above horizon |
+| METEOR-M2 4 | 59051 | 137.100 MHz | LRPT, continuous when above horizon |
+| FUNCUBE-1 (AO-73) | 39444 | 145.935 MHz | telemetry beacon (300 mW sun / 30 mW eclipse) |
+| ISS (ZARYA) | 25544 | 437.825 MHz | APRS digipeater (UHF — VHF 145.825 inactive since Nov 2025) |
 
 ## API
 
