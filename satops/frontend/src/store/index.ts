@@ -66,7 +66,7 @@ export const useStore = create<SatOpsState>((set) => ({
   activePass: null,
   setActivePass: (activePass) => set({ activePass }),
 
-  sdrStatus: { connected: false, driver: null, frequency_hz: null, sample_rate: null, gain: null },
+  sdrStatus: { connected: false, mode: "synthetic", driver: null, frequency_hz: null, sample_rate: null, gain: null },
   setSdrStatus: (sdrStatus) => set({ sdrStatus }),
 
   wsConnected: false,

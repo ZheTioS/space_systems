@@ -50,6 +50,7 @@ export interface LinkBudgetUpdate {
 
 export interface SdrStatus {
   connected: boolean;
+  mode: "hardware" | "synthetic";
   driver: string | null;
   frequency_hz: number | null;
   sample_rate: number | null;
