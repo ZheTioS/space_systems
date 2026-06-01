@@ -27,6 +27,23 @@ export const api = {
   setFrequency: (frequencyHz: number) =>
     fetchJson<SdrStatus>(`/sdr/frequency?frequency_hz=${frequencyHz}`, { method: "POST" }),
 
+  setAudioMode: (mode: "off" | "wfm" | "nfm") =>
+    fetchJson<{ mode: string; audio_rate_hz: number }>(`/sdr/audio_mode?mode=${mode}`, { method: "POST" }),
+
+  scanBand: (startHz?: number, endHz?: number, thresholdDb?: number) => {
+    const params = new URLSearchParams();
+    if (startHz != null) params.set("start_hz", String(startHz));
+    if (endHz != null) params.set("end_hz", String(endHz));
+    if (thresholdDb != null) params.set("threshold_db", String(thresholdDb));
+    const qs = params.toString();
+    return fetchJson<{
+      start_hz: number;
+      end_hz: number;
+      threshold_db: number;
+      stations: { frequency_hz: number; power_db: number; snr_db: number }[];
+    }>(`/sdr/scan${qs ? `?${qs}` : ""}`, { method: "POST" });
+  },
+
   getObservations: (limit = 50) => fetchJson<Observation[]>(`/observations/?limit=${limit}`),
 
   health: () => fetchJson<{ status: string; sdr: SdrStatus }>("/health"),

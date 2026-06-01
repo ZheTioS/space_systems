@@ -4,6 +4,7 @@ import { PassPanel } from "./components/PassPanel/PassPanel";
 import { SpectrumPanel } from "./components/SpectrumPanel/SpectrumPanel";
 import { GroundTrackPanel } from "./components/GroundTrackPanel/GroundTrackPanel";
 import { LinkBudgetPanel } from "./components/LinkBudgetPanel/LinkBudgetPanel";
+import { RadioPanel } from "./components/RadioPanel/RadioPanel";
 import { PassHistory } from "./components/PassHistory/PassHistory";
 import { useWebSocket } from "./hooks/useWebSocket";
 import { useStore } from "./store";
@@ -32,8 +33,11 @@ function App() {
           <GroundTrackPanel />
         </div>
 
-        {/* Right panel */}
-        <LinkBudgetPanel />
+        {/* Right column — Radio + Link Budget */}
+        <div className="flex flex-col gap-2 min-h-0 overflow-y-auto">
+          <RadioPanel />
+          <LinkBudgetPanel />
+        </div>
       </div>
 
       {/* Bottom panel */}

@@ -43,6 +43,10 @@ interface SatOpsState {
   // Connection
   wsConnected: boolean;
   setWsConnected: (connected: boolean) => void;
+
+  // Radio tuning scope — when "local", PassPanel must NOT auto-retune the SDR.
+  radioTuning: "sat" | "local";
+  setRadioTuning: (t: "sat" | "local") => void;
 }
 
 export const useStore = create<SatOpsState>((set) => ({
@@ -71,4 +75,7 @@ export const useStore = create<SatOpsState>((set) => ({
 
   wsConnected: false,
   setWsConnected: (wsConnected) => set({ wsConnected }),
+
+  radioTuning: "sat",
+  setRadioTuning: (radioTuning) => set({ radioTuning }),
 }));

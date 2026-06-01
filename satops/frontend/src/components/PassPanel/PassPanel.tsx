@@ -11,17 +11,28 @@ export function PassPanel() {
   const setSatellites = useStore((s) => s.setSatellites);
   const selectSatellite = useStore((s) => s.selectSatellite);
   const setPasses = useStore((s) => s.setPasses);
+  const setSdrStatus = useStore((s) => s.setSdrStatus);
+  const radioTuning = useStore((s) => s.radioTuning);
 
   useEffect(() => {
     api.getSatellites().then(setSatellites);
   }, [setSatellites]);
 
   useEffect(() => {
-    if (selectedSatellite) {
-      api.getPasses(selectedSatellite.norad_id).then(setPasses);
-      api.setFrequency(selectedSatellite.frequency_hz);
-    }
-  }, [selectedSatellite, setPasses]);
+    if (!selectedSatellite) return;
+    api.getPasses(selectedSatellite.norad_id).then(setPasses);
+    // Respect the Radio panel's tuning scope — in LOCAL mode the user owns
+    // the SDR frequency, so picking a different satellite must not steal it.
+    if (radioTuning !== "sat") return;
+    // Always reflect the *actual* SDR state in the store, even if the retune
+    // failed at the hardware layer — that way the TopBar tune-mismatch
+    // indicator can light up instead of the UI silently believing the radio
+    // moved.
+    api
+      .setFrequency(selectedSatellite.frequency_hz)
+      .then(setSdrStatus)
+      .catch(() => api.getSdrStatus().then(setSdrStatus).catch(() => {}));
+  }, [selectedSatellite, setPasses, setSdrStatus, radioTuning]);
 
   // Auto-select first satellite
   useEffect(() => {

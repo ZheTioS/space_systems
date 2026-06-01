@@ -8,7 +8,9 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
     proxy: {
-      '/api': backendUrl,
+      // `ws: true` is essential — without it, WebSocket upgrade requests to
+      // `/api/sdr/audio` (and any other /api WS endpoint) silently fail.
+      '/api': { target: backendUrl, ws: true, changeOrigin: true },
     },
   },
 })
