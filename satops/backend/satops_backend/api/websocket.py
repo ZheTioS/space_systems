@@ -145,7 +145,10 @@ async def websocket_endpoint(ws: WebSocket) -> None:
                     await ws.send_json({"type": "active_pass_cleared", "timestamp": now.isoformat()})
                     prev_active_norad = None
 
-            # Spectrum update
+            # Spectrum update — center_frequency_hz reflects the *actual* SDR
+            # tune, not the selected satellite's nominal carrier. UI can compare
+            # the two to flag a tune mismatch when a retune failed or another
+            # client moved the radio.
             spectrum = await sdr_service.get_spectrum()
             if spectrum is not None:
                 sdr_status = sdr_service.status
@@ -153,7 +156,7 @@ async def websocket_endpoint(ws: WebSocket) -> None:
                     {
                         "type": "spectrum_update",
                         "timestamp": now.isoformat(),
-                        "center_frequency_hz": frequency_hz,
+                        "center_frequency_hz": sdr_status.frequency_hz,
                         "bandwidth_hz": sdr_status.sample_rate,
                         "magnitudes_db": spectrum.tolist(),
                     }
